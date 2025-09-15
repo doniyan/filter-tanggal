@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Filter Data Absensi</title>
+  <style>
+    /* Simple modern UI */
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --accent:#6c8cff;
+      --muted:#7b8794;
+      --soft:#eef3ff;
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(180deg,var(--bg),#ffffff);
+      margin:0; padding:32px;
+      color:#263238;
+    }
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:0 6px 18px rgba(33,35,42,0.06)}
+    .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .field{display:flex;flex-direction:column;font-size:13px}
+    .field label{color:var(--muted);margin-bottom:6px}
+    input[type="text"], select{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ee;min-width:180px}
+    .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+    .btn.secondary{background:transparent;color:var(--accent);border:1px solid rgba(108,140,255,0.18)}
+    .row{display:flex;gap:12px;align-items:center}
+    .table-wrap{overflow:auto;margin-top:18px}
+    table{border-collapse:collapse;width:100%;min-width:800px}
+    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #f1f3f6;font-size:14px}
+    th{background:linear-gradient(90deg, #fbfdff, #f7f9ff);position:sticky;top:0}
+    .muted{color:var(--muted);font-size:13px}
+    .pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}
+    .pager-btn{padding:8px 10px;border-radius:8px;border:1px solid #e6e9ee;background:white;cursor:pointer}
+    .pager-input{width:60px;padding:8px;border-radius:8px;border:1px solid #e6e9ee}
+    .small{font-size:13px;color:var(--muted)}
+    .empty{padding:40px;text-align:center;color:var(--muted)}
+    @media (max-width:760px){
+      .filters{flex-direction:column;align-items:stretch}
+      .row{flex-direction:column;align-items:stretch}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Filter Data Absensi</h1>
+      <div class="small">Format tanggal: <strong>dd/mm/yyyy</strong> (sama dengan sheet)</div>
+    </header>
+
+    <div class="card">
+      <div class="filters">
+        <div class="field">
+          <label for="kelas">Pilih Kelas</label>
+          <select id="kelas">
+            <option value="">Semua Kelas</option>
+            <!-- Kelas akan diisi otomatis berdasarkan data yang diterima atau bisa Anda tambahkan manual -->
+            <option value="Kelas 1">Kelas 1</option>
+            <option value="Kelas 2">Kelas 2</option>
+            <option value="Kelas 3">Kelas 3</option>
+            <option value="Kelas 4">Kelas 4</option>
+            <option value="Kelas 5">Kelas 5</option>
+            <option value="Kelas 6">Kelas 6</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="start">Tanggal Mulai (mm/dd/yyyy) Bln/Hr/Tahun</label>
+          <input id="start" type="text" placeholder="mm/dd/yyyy" />
+        </div>
+
+        <div class="field">
+          <label for="end">Tanggal Akhir (mm/dd/yyyy) Bln/Hr/Tahun</label>
+          <input id="end" type="text" placeholder="mm/dd/yyyy" />
+        </div>
+
+        <div class="field">
+          <label>&nbsp;</label>
+          <div style="display:flex;gap:8px">
+            <button id="btnFilter" class="btn">Terapkan Filter</button>
+            <button id="btnReset" class="btn secondary">Reset</button>
+          </div>
+        </div>
+
+        <div style="margin-left:auto" class="small muted">Page size:
+          <select id="pageSize" style="margin-left:8px;padding:6px;border-radius:8px">
+            <option>10</option>
+            <option selected>20</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap card" style="margin-top:16px;padding:0">
+        <table id="dataTable" aria-live="polite">
+          <thead>
+            <tr id="tableHead">
+              <!-- akan diisi -->
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="6" class="empty">Gunakan filter di atas lalu klik <strong>Terapkan Filter</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+        <div class="muted" id="summary">Menampilkan —</div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <footer style="margin-top:18px;text-align:center;color:var(--muted);font-size:13px">
+      Ganti URL API di `appConfig.WEB_APP_URL` di file JS jika perlu. Dapat digunakan dengan GitHub Pages.
+    </footer>
+  </div>
+
+  <script>
+    // ====== CONFIG: ganti WEB_APP_URL dengan URL hasil deploy Apps Script (.exec) ======
+    const appConfig = {
+      WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyuaTZQldwbVvMpJGHRL-9XL9kaGI0r0DtBW1r0eG_iofZLHOJb5dPlGVMT_7MZLl95qA/exec" // contoh: https://script.google.com/macros/s/AKfy.../exec
+    };
+
+    // util: validate dd/mm/yyyy or dd/mm/yyyy hh:mm:ss
+    function parseDDMMYYYY(s) {
+      if (!s) return null;
+      s = s.trim();
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+      if (!m) return null;
+      const day = parseInt(m[1],10);
+      const month = parseInt(m[2],10) - 1;
+      const year = parseInt(m[3],10);
+      const hour = m[4] ? parseInt(m[4],10) : 0;
+      const min = m[5] ? parseInt(m[5],10) : 0;
+      const sec = m[6] ? parseInt(m[6],10) : 0;
+      const d = new Date(year, month, day, hour, min, sec);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    function formatDisplayDateFromIso(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      const pad = n => n < 10 ? "0"+n : n;
+      return pad(d.getDate()) + "/" + pad(d.getMonth()+1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+    }
+
+    // state
+    let state = {
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+      total: 0,
+      headers: []
+    };
+
+    // DOM
+    const el = {
+      kelas: document.getElementById("kelas"),
+      start: document.getElementById("start"),
+      end: document.getElementById("end"),
+      btnFilter: document.getElementById("btnFilter"),
+      btnReset: document.getElementById("btnReset"),
+      tableHead: document.getElementById("tableHead"),
+      tableBody: document.getElementById("tableBody"),
+      pagination: document.getElementById("pagination"),
+      pageSize: document.getElementById("pageSize"),
+      summary: document.getElementById("summary"),
+    };
+
+    el.btnFilter.addEventListener("click", () => {
+      state.page = 1;
+      fetchAndRender();
+    });
+    el.btnReset.addEventListener("click", () => {
+      el.kelas.value = "";
+      el.start.value = "";
+      el.end.value = "";
+      state.page = 1;
+      fetchAndRender();
+    });
+    el.pageSize.addEventListener("change", () => {
+      state.pageSize = parseInt(el.pageSize.value, 10) || 20;
+      state.page = 1;
+      fetchAndRender();
+    });
+
+    async function fetchAndRender() {
+      // validate start/end
+      const kelas = el.kelas.value.trim();
+      const start = el.start.value.trim();
+      const end = el.end.value.trim();
+
+      // If provided and invalid format, show message
+      if (start && !parseDDMMYYYY(start)) {
+        alert("Format Tanggal Mulai harus dd/mm/yyyy atau dd/mm/yyyy hh:mm:ss");
+        return;
+      }
+      if (end && !parseDDMMYYYY(end)) {
+        alert("Format Tanggal Akhir harus dd/mm/yyyy atau dd/mm/yyyy hh:mm:ss");
+        return;
+      }
+
+      // build query
+      const params = new URLSearchParams();
+      if (kelas) params.append("kelas", kelas);
+      if (start) params.append("start", start);
+      if (end) params.append("end", end);
+      params.append("page", String(state.page));
+      params.append("pageSize", String(state.pageSize));
+
+      const url = appConfig.WEB_APP_URL + "?" + params.toString();
+
+      // show loading
+      el.tableBody.innerHTML = '<tr><td colspan="20" class="empty">Memuat data…</td></tr>';
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error("HTTP " + res.status + " - " + txt);
+        }
+        const json = await res.json();
+        if (json.error) {
+          throw new Error(json.error);
+        }
+        state.total = json.total || 0;
+        state.page = json.page || 1;
+        state.pageSize = json.pageSize || state.pageSize;
+        state.totalPages = json.totalPages || Math.max(1, Math.ceil(state.total / state.pageSize));
+        renderTable(json.items || []);
+        renderPagination();
+        el.summary.textContent = `Menampilkan ${ (json.items||[]).length } dari ${state.total} baris — Halaman ${state.page} / ${state.totalPages}`;
+      } catch (err) {
+        el.tableBody.innerHTML = '<tr><td colspan="20" class="empty">Gagal memuat data: ' + String(err) + '</td></tr>';
+        el.summary.textContent = "Error saat memuat data";
+        console.error(err);
+      }
+    }
+
+    function renderTable(items) {
+      if (!items || items.length === 0) {
+        el.tableBody.innerHTML = '<tr><td colspan="20" class="empty">Tidak ada data sesuai filter.</td></tr>';
+        // still attempt to show headers if known
+        if (state.headers && state.headers.length) {
+          buildHeaderRow(state.headers);
+        }
+        return;
+      }
+      // derive headers from first item (object)
+      const first = items[0];
+      const headers = Object.keys(first).filter(k => !k.startsWith("_"));
+      state.headers = headers;
+      buildHeaderRow(headers);
+
+      const rows = items.map(item => {
+        const tds = headers.map(h => {
+          let v = item[h];
+          // if header contains 'timestamp' or 'time' show formatted display
+          if (/timestamp|time|tgl|tanggal/i.test(h)) {
+            if (item._timestamp_display) v = item._timestamp_display;
+            else if (item[h]) v = String(item[h]);
+          }
+          return `<td>${escapeHtml(v === null || v === undefined ? "" : String(v))}</td>`;
+        }).join("");
+        return `<tr>${tds}</tr>`;
+      });
+      el.tableBody.innerHTML = rows.join("");
+    }
+
+    function buildHeaderRow(headers) {
+      el.tableHead.innerHTML = headers.map(h => `<th>${escapeHtml(h)}</th>`).join("");
+    }
+
+    function renderPagination() {
+      const frag = [];
+      const p = state.page;
+      const tp = state.totalPages;
+
+      frag.push(`<button class="pager-btn" ${p===1?'disabled':''} onclick="window.appGotoPage(1)">« First</button>`);
+      frag.push(`<button class="pager-btn" ${p===1?'disabled':''} onclick="window.appGotoPage(${p-1})">‹ Prev</button>`);
+      frag.push(`<span class="muted" style="padding:0 8px">Halaman</span>`);
+      frag.push(`<input class="pager-input" type="number" min="1" max="${tp}" value="${p}" onchange="window.appGotoPage(this.value)" />`);
+      frag.push(`<span class="muted" style="padding:0 8px">dari ${tp}</span>`);
+      frag.push(`<button class="pager-btn" ${p===tp?'disabled':''} onclick="window.appGotoPage(${p+1})">Next ›</button>`);
+      frag.push(`<button class="pager-btn" ${p===tp?'disabled':''} onclick="window.appGotoPage(${tp})">Last »</button>`);
+
+      el.pagination.innerHTML = frag.join("");
+    }
+
+    // global function for onclick in pagination (unsafe but simple)
+    window.appGotoPage = function(n) {
+      const nn = parseInt(n,10);
+      if (isNaN(nn)) return;
+      state.page = Math.max(1, Math.min(state.totalPages, nn));
+      fetchAndRender();
+    };
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    // initial load (no filter -> show nothing)
+    (function init(){
+      // set page size initial
+      state.pageSize = parseInt(el.pageSize.value, 10) || 20;
+      // if you want to auto-fetch on load, uncomment next line:
+      // fetchAndRender();
+    })();
+  </script>
+</body>
+</html>
