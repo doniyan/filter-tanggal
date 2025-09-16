@@ -73,12 +73,12 @@
 
         <div class="field">
           <label for="start">Tanggal Mulai (mm/dd/yyyy) Bln/Hr/Tahun</label>
-          <input id="start" type="text" placeholder="mm/dd/yyyy" />
+          <input id="start" type="date" placeholder="mm/dd/yyyy" />
         </div>
 
         <div class="field">
           <label for="end">Tanggal Akhir (mm/dd/yyyy) Bln/Hr/Tahun</label>
-          <input id="end" type="text" placeholder="mm/dd/yyyy" />
+          <input id="end" type="date" placeholder="mm/dd/yyyy" />
         </div>
 
         <div class="field">
@@ -129,22 +129,23 @@
       WEB_APP_URL: "https://script.google.com/macros/s/AKfycbyuaTZQldwbVvMpJGHRL-9XL9kaGI0r0DtBW1r0eG_iofZLHOJb5dPlGVMT_7MZLl95qA/exec" // contoh: https://script.google.com/macros/s/AKfy.../exec
     };
 
-    // util: validate dd/mm/yyyy or dd/mm/yyyy hh:mm:ss
-    function parseDDMMYYYY(s) {
-      if (!s) return null;
-      s = s.trim();
-      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
-      if (!m) return null;
-      const day = parseInt(m[1],10);
-      const month = parseInt(m[2],10) - 1;
-      const year = parseInt(m[3],10);
-      const hour = m[4] ? parseInt(m[4],10) : 0;
-      const min = m[5] ? parseInt(m[5],10) : 0;
-      const sec = m[6] ? parseInt(m[6],10) : 0;
-      const d = new Date(year, month, day, hour, min, sec);
-      if (isNaN(d.getTime())) return null;
-      return d;
-    }
+
+  // util: validate mm/dd/yyyy or mm/dd/yyyy hh:mm:ss
+function parseMMDDYYYY(s) {
+  if (!s) return null;
+  s = s.trim();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (!m) return null;
+  const month = parseInt(m[1],10) - 1; // bulan di indeks ke-1
+  const day = parseInt(m[2],10);       // hari di indeks ke-2
+  const year = parseInt(m[3],10);
+  const hour = m[4] ? parseInt(m[4],10) : 0;
+  const min = m[5] ? parseInt(m[5],10) : 0;
+  const sec = m[6] ? parseInt(m[6],10) : 0;
+  const d = new Date(year, month, day, hour, min, sec);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
 
     function formatDisplayDateFromIso(iso) {
       if (!iso) return "";
@@ -200,14 +201,16 @@
       const end = el.end.value.trim();
 
       // If provided and invalid format, show message
-      if (start && !parseDDMMYYYY(start)) {
-        alert("Format Tanggal Mulai harus dd/mm/yyyy atau dd/mm/yyyy hh:mm:ss");
-        return;
-      }
-      if (end && !parseDDMMYYYY(end)) {
-        alert("Format Tanggal Akhir harus dd/mm/yyyy atau dd/mm/yyyy hh:mm:ss");
-        return;
-      }
+    // If provided and invalid format, show message
+if (start && !parseMMDDYYYY(start)) {
+  alert("Format Tanggal Mulai harus mm/dd/yyyy atau mm/dd/yyyy hh:mm:ss");
+  return;
+}
+if (end && !parseMMDDYYYY(end)) {
+  alert("Format Tanggal Akhir harus mm/dd/yyyy atau mm/dd/yyyy hh:mm:ss");
+  return;
+}
+
 
       // build query
       const params = new URLSearchParams();
@@ -317,4 +320,5 @@
   </script>
 </body>
 </html>
+
 
